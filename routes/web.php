@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ClubController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,7 +25,10 @@ Route::view('/club/dashboard', 'club.dashboard')
 
 Route::resource('users', UserController::class)
     ->middleware('auth');
-    
+
+Route::resource('clubs', ClubController::class)
+    ->middleware('auth');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

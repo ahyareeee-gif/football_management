@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('logo')->nullable();
 
             $table->year('founded_year')->nullable();
-
+            $table->string('city')->nullable();
             $table->text('address')->nullable();
             $table->text('description')->nullable();
 
