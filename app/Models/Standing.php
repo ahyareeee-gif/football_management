@@ -2,14 +2,31 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-public function tournament()
+class Standing extends Model
 {
-    return $this->belongsTo(Tournament::class);
-}
+    protected $fillable = [
+        'tournament_id',
+        'club_id',
+        'played',
+        'win',
+        'draw',
+        'lose',
+        'goals_for',
+        'goals_against',
+        'goal_difference',
+        'points',
+    ];
 
-public function club()
-{
-    return $this->belongsTo(Club::class);
+    public function tournament(): BelongsTo
+    {
+        return $this->belongsTo(Tournament::class);
+    }
+
+    public function club(): BelongsTo
+    {
+        return $this->belongsTo(Club::class);
+    }
 }

@@ -2,9 +2,20 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-public function club(): BelongsTo
+class Coach extends Model
 {
-    return $this->belongsTo(Club::class);
+    protected $fillable = [
+        'club_id',
+        'name',
+        'license',
+        'photo',
+    ];
+
+    public function club(): BelongsTo
+    {
+        return $this->belongsTo(Club::class);
+    }
 }

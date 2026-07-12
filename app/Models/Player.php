@@ -2,15 +2,35 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-public function club(): BelongsTo
+class Player extends Model
 {
-    return $this->belongsTo(Club::class);
-}
+    protected $fillable = [
+        'club_id',
+        'name',
+        'position',
+        'jersey_number',
+        'birth_date',
+        'photo',
+    ];
 
-public function statistics()
-{
-    return $this->hasMany(PlayerStatistic::class);
+    protected function casts(): array
+    {
+        return [
+            'birth_date' => 'date',
+        ];
+    }
+
+    public function club(): BelongsTo
+    {
+        return $this->belongsTo(Club::class);
+    }
+
+    public function statistics(): HasMany
+    {
+        return $this->hasMany(PlayerStatistic::class);
+    }
 }

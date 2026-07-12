@@ -9,7 +9,7 @@ class ClubController extends Controller
 {
     public function index()
     {
-        $clubs = Club::all();
+        $clubs = Club::latest()->get();
 
         return view('clubs.index', compact('clubs'));
     }
@@ -21,24 +21,48 @@ class ClubController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|max:255',
-            'founded_year' => 'nullable|integer',
-            'city' => 'nullable|max:255',
-            'address' => 'nullable',
-            'description' => 'nullable',
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'founded_year' => ['nullable', 'integer', 'digits:4'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
         ]);
 
-        Club::create([
-            'user_id' => auth()->id(),
-            'name' => $request->name,
-            'founded_year' => $request->founded_year,
-            'city' => $request->city,
-            'address' => $request->address,
-            'description' => $request->description,
-        ]);
+        $validated['user_id'] = auth()->id();
+
+        Club::create($validated);
 
         return redirect()->route('clubs.index')
             ->with('success', 'Club berhasil ditambahkan');
+    }
+
+    public function edit(Club $club)
+    {
+        return view('clubs.edit', compact('club'));
+    }
+
+    public function update(Request $request, Club $club)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'founded_year' => ['nullable', 'integer', 'digits:4'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $club->update($validated);
+
+        return redirect()->route('clubs.index')
+            ->with('success', 'Club berhasil diperbarui');
+    }
+
+    public function destroy(Club $club)
+    {
+        $club->delete();
+
+        return redirect()->route('clubs.index')
+            ->with('success', 'Club berhasil dihapus');
     }
 }

@@ -2,24 +2,47 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-public function creator(): BelongsTo
+class Tournament extends Model
 {
-    return $this->belongsTo(User::class, 'created_by');
-}
-public function registrations()
-{
-    return $this->hasMany(TournamentRegistration::class);
-}
+    protected $fillable = [
+        'created_by',
+        'name',
+        'description',
+        'start_date',
+        'end_date',
+        'format',
+        'status',
+    ];
 
-public function matches()
-{
-    return $this->hasMany(FootballMatch::class);
-}
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+            'end_date' => 'date',
+        ];
+    }
 
-public function standings()
-{
-    return $this->hasMany(Standing::class);
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(TournamentRegistration::class);
+    }
+
+    public function matches(): HasMany
+    {
+        return $this->hasMany(FootballMatch::class);
+    }
+
+    public function standings(): HasMany
+    {
+        return $this->hasMany(Standing::class);
+    }
 }

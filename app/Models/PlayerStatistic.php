@@ -2,17 +2,27 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-public function player()
+class PlayerStatistic extends Model
 {
-    return $this->belongsTo(Player::class);
-}
+    protected $fillable = [
+        'player_id',
+        'football_match_id',
+        'goals',
+        'assists',
+        'yellow_cards',
+        'red_cards',
+    ];
 
-public function match()
-{
-    return $this->belongsTo(
-        FootballMatch::class,
-        'football_match_id'
-    );
+    public function player(): BelongsTo
+    {
+        return $this->belongsTo(Player::class);
+    }
+
+    public function match(): BelongsTo
+    {
+        return $this->belongsTo(FootballMatch::class, 'football_match_id');
+    }
 }

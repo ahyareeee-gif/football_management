@@ -17,16 +17,18 @@ Route::get('/dashboard', [DashboardController::class, 'redirect'])
 Route::view('/super-admin/dashboard', 'super-admin.dashboard')
     ->middleware('auth');
 
-Route::view('/tournament/dashboard', 'tournament.dashboard')
+Route::view('/tournament/dashboard', 'admin-tournament.dashboard')
     ->middleware('auth');
 
-Route::view('/club/dashboard', 'club.dashboard')
+Route::view('/club/dashboard', 'admin-club.dashboard')
     ->middleware('auth');
 
 Route::resource('users', UserController::class)
+    ->except(['show'])
     ->middleware('auth');
 
 Route::resource('clubs', ClubController::class)
+    ->except(['show'])
     ->middleware('auth');
 
 Route::middleware('auth')->group(function () {
