@@ -28,7 +28,7 @@
                 Edit
             </a>
 
-            <form action="{{ route('users.destroy', $user) }}" method="POST" style="display:inline">
+            <form action="{{ route('users.destroy', $user) }}" method="POST" style="display:inline" onsubmit="return confirm('Yakin ingin menghapus data ini? Data yang terkait bisa ikut terhapus.')">
                 @csrf
                 @method('DELETE')
 
@@ -40,3 +40,4 @@
     </tr>
     @endforeach
 </table>
+
