@@ -28,6 +28,9 @@ class PlayerController extends Controller
 
     public function create()
     {
+        abort_unless($this->isAdminKlub(), 403);
+        $this->ensureClubIsApproved();
+
         $clubs = $this->scopedClubsQuery()->orderBy('name')->get();
 
         return view('players.create', compact('clubs'));
@@ -35,6 +38,8 @@ class PlayerController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($this->isAdminKlub(), 403);
+
         $validated = $this->validatePlayer($request);
         $validated['photo'] = $this->storeUploadedFile($request, 'photo', 'players/photos');
 
@@ -48,6 +53,10 @@ class PlayerController extends Controller
     {
         $this->authorizeClubAccess($player->club);
 
+        if ($this->isAdminKlub()) {
+            $this->ensureClubIsApproved($player->club);
+        }
+
         $clubs = $this->scopedClubsQuery()->orderBy('name')->get();
 
         return view('players.edit', compact('player', 'clubs'));
@@ -56,6 +65,10 @@ class PlayerController extends Controller
     public function update(Request $request, Player $player)
     {
         $this->authorizeClubAccess($player->club);
+
+        if ($this->isAdminKlub()) {
+            $this->ensureClubIsApproved($player->club);
+        }
 
         $validated = $this->validatePlayer($request);
         $photo = $this->replaceUploadedFile($request, 'photo', 'players/photos', $player->photo);
@@ -75,8 +88,12 @@ class PlayerController extends Controller
     public function destroy(Player $player)
     {
         $this->authorizeClubAccess($player->club);
-        $this->deleteUploadedFile($player->photo);
 
+        if ($this->isAdminKlub()) {
+            $this->ensureClubIsApproved($player->club);
+        }
+
+        $this->deleteUploadedFile($player->photo);
         $player->delete();
 
         return redirect()->route('players.index')
@@ -96,6 +113,10 @@ class PlayerController extends Controller
 
         $club = Club::findOrFail($validated['club_id']);
         $this->authorizeClubAccess($club);
+
+        if ($this->isAdminKlub()) {
+            $this->ensureClubIsApproved($club);
+        }
 
         return $validated;
     }

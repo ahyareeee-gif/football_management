@@ -16,7 +16,8 @@ class TournamentController extends Controller
     public function index()
     {
         $tournaments = $this->scopedTournamentsQuery()
-            ->with('creator')
+            ->when($this->isAdminKlub(), fn ($query) => $query->where('status', 'Open'))
+            ->with(['creator', 'registrations' => fn ($query) => $query->where('club_id', $this->currentUserClub()?->id)])
             ->withCount('registrations')
             ->latest()
             ->get();
@@ -26,11 +27,15 @@ class TournamentController extends Controller
 
     public function create()
     {
+        abort_if($this->isAdminKlub(), 403);
+
         return view('tournaments.create');
     }
 
     public function store(Request $request)
     {
+        abort_if($this->isAdminKlub(), 403);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -50,7 +55,11 @@ class TournamentController extends Controller
 
     public function show(Tournament $tournament)
     {
-        $this->authorizeTournamentAccess($tournament);
+        if ($this->isAdminKlub()) {
+            abort_unless($tournament->status === 'Open', 403);
+        } else {
+            $this->authorizeTournamentAccess($tournament);
+        }
 
         $tournament->load([
             'creator',
@@ -62,7 +71,10 @@ class TournamentController extends Controller
         ]);
 
         $registeredClubIds = $tournament->registrations->pluck('club_id');
-        $clubs = Club::whereNotIn('id', $registeredClubIds)->orderBy('name')->get();
+        $clubs = Club::where('status', 'approved')->whereNotIn('id', $registeredClubIds)->orderBy('name')->get();
+        $clubRegistration = $this->isAdminKlub()
+            ? $tournament->registrations->firstWhere('club_id', $this->currentUserClub()?->id)
+            : null;
         $standings = $tournament->standings
             ->sortByDesc('goal_difference')
             ->sortByDesc('points')
@@ -89,7 +101,76 @@ class TournamentController extends Controller
         $topScorers = $playerStats->sortByDesc('goals')->take(5)->values();
         $topAssists = $playerStats->sortByDesc('assists')->take(5)->values();
 
-        return view('tournaments.show', compact('tournament', 'clubs', 'standings', 'matches', 'topScorers', 'topAssists'));
+        return view('tournaments.show', compact('tournament', 'clubs', 'clubRegistration', 'standings', 'matches', 'topScorers', 'topAssists'));
+    }
+
+
+    public function report(Tournament $tournament)
+    {
+        if ($this->isAdminKlub()) {
+            $club = $this->currentUserClub();
+            abort_unless(
+                $club && $tournament->registrations()->where('club_id', $club->id)->where('status', 'Approved')->exists(),
+                403
+            );
+        } else {
+            $this->authorizeTournamentAccess($tournament);
+        }
+
+        $tournament->load([
+            'creator',
+            'registrations.club',
+            'matches.homeClub',
+            'matches.awayClub',
+            'matches.result',
+            'standings.club',
+        ]);
+
+        $matches = $tournament->matches->sortBy('match_date')->values();
+        $finishedMatches = $matches->where('status', 'Finished')->filter(fn ($match) => $match->result)->values();
+        $unfinishedMatches = $matches->reject(fn ($match) => $match->status === 'Finished' && $match->result)->values();
+        $approvedRegistrations = $tournament->registrations->where('status', 'Approved')->values();
+        $standings = $tournament->standings
+            ->sortByDesc('goal_difference')
+            ->sortByDesc('points')
+            ->values();
+
+        $playerStats = PlayerStatistic::with('player.club')
+            ->whereIn('football_match_id', $matches->pluck('id'))
+            ->get()
+            ->groupBy('player_id')
+            ->map(function ($rows) {
+                $first = $rows->first();
+
+                return (object) [
+                    'player' => $first->player,
+                    'goals' => $rows->sum('goals'),
+                    'assists' => $rows->sum('assists'),
+                    'yellow_cards' => $rows->sum('yellow_cards'),
+                    'red_cards' => $rows->sum('red_cards'),
+                ];
+            })
+            ->values();
+
+        return view('tournaments.report', [
+            'tournament' => $tournament,
+            'summary' => [
+                'approvedParticipants' => $approvedRegistrations->count(),
+                'totalMatches' => $matches->count(),
+                'finishedMatches' => $finishedMatches->count(),
+                'unfinishedMatches' => $unfinishedMatches->count(),
+                'totalGoals' => $finishedMatches->sum(fn ($match) => $match->result->home_score + $match->result->away_score),
+                'yellowCards' => $playerStats->sum('yellow_cards'),
+                'redCards' => $playerStats->sum('red_cards'),
+            ],
+            'approvedRegistrations' => $approvedRegistrations,
+            'standings' => $standings,
+            'recentResults' => $finishedMatches->sortByDesc('match_date')->take(8)->values(),
+            'unfinishedMatches' => $unfinishedMatches->sortBy('match_date')->take(8)->values(),
+            'topScorers' => $playerStats->sortByDesc('goals')->take(8)->values(),
+            'topAssists' => $playerStats->sortByDesc('assists')->take(8)->values(),
+            'cardLeaders' => $playerStats->sortByDesc(fn ($stat) => $stat->yellow_cards + $stat->red_cards)->take(8)->values(),
+        ]);
     }
 
     public function edit(Tournament $tournament)

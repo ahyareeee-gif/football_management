@@ -17,18 +17,21 @@
                         <x-nav-link :href="route('clubs.index')" :active="request()->routeIs('clubs.*')">
                             {{ __('Klub') }}
                         </x-nav-link>
-                        <x-nav-link :href="route('players.index')" :active="request()->routeIs('players.*')">
-                            {{ __('Pemain') }}
+                    @endhasanyrole
+
+                    @role('Admin Klub')
+                        <x-nav-link :href="route('club-members.index')" :active="request()->routeIs('club-members.*')">
+                            {{ __('Anggota Club') }}
                         </x-nav-link>
-                        <x-nav-link :href="route('coaches.index')" :active="request()->routeIs('coaches.*')">
-                            {{ __('Pelatih') }}
+                    @endrole
+
+                    @hasanyrole('Super Admin|Admin Turnamen|Admin Klub')
+                        <x-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*') || request()->routeIs('tournament-registrations.*')">
+                            {{ __('Turnamen') }}
                         </x-nav-link>
                     @endhasanyrole
 
                     @hasanyrole('Super Admin|Admin Turnamen')
-                        <x-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*') || request()->routeIs('tournament-registrations.*')">
-                            {{ __('Turnamen') }}
-                        </x-nav-link>
                         <x-nav-link :href="route('matches.index')" :active="request()->routeIs('matches.*')">
                             {{ __('Pertandingan') }}
                         </x-nav-link>
@@ -98,18 +101,21 @@
                 <x-responsive-nav-link :href="route('clubs.index')" :active="request()->routeIs('clubs.*')">
                     {{ __('Klub') }}
                 </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('players.index')" :active="request()->routeIs('players.*')">
-                    {{ __('Pemain') }}
+            @endhasanyrole
+
+            @role('Admin Klub')
+                <x-responsive-nav-link :href="route('club-members.index')" :active="request()->routeIs('club-members.*')">
+                    {{ __('Anggota Club') }}
                 </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('coaches.index')" :active="request()->routeIs('coaches.*')">
-                    {{ __('Pelatih') }}
+            @endrole
+
+            @hasanyrole('Super Admin|Admin Turnamen|Admin Klub')
+                <x-responsive-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*') || request()->routeIs('tournament-registrations.*')">
+                    {{ __('Turnamen') }}
                 </x-responsive-nav-link>
             @endhasanyrole
 
             @hasanyrole('Super Admin|Admin Turnamen')
-                <x-responsive-nav-link :href="route('tournaments.index')" :active="request()->routeIs('tournaments.*') || request()->routeIs('tournament-registrations.*')">
-                    {{ __('Turnamen') }}
-                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('matches.index')" :active="request()->routeIs('matches.*')">
                     {{ __('Pertandingan') }}
                 </x-responsive-nav-link>

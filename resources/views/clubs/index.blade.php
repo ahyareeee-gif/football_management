@@ -2,9 +2,11 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Data Klub</h2>
-            <a href="{{ route('clubs.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
-                Tambah Klub
-            </a>
+            @role('Admin Klub')
+                <a href="{{ route('clubs.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                    Tambah Klub
+                </a>
+            @endrole
         </div>
     </x-slot>
 
@@ -20,8 +22,9 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-4 py-3 text-left font-medium text-gray-500">Klub</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-500">Admin</th>
                                 <th class="px-4 py-3 text-left font-medium text-gray-500">Kota</th>
-                                <th class="px-4 py-3 text-left font-medium text-gray-500">Berdiri</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-500">Status</th>
                                 <th class="px-4 py-3 text-left font-medium text-gray-500">Pemain</th>
                                 <th class="px-4 py-3 text-left font-medium text-gray-500">Pelatih</th>
                                 <th class="px-4 py-3 text-right font-medium text-gray-500">Aksi</th>
@@ -29,6 +32,19 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white">
                             @forelse ($clubs as $club)
+                                @php
+                                    $statusClass = match ($club->status) {
+                                        'approved' => 'bg-green-100 text-green-800',
+                                        'rejected' => 'bg-red-100 text-red-800',
+                                        default => 'bg-yellow-100 text-yellow-800',
+                                    };
+
+                                    $statusLabel = match ($club->status) {
+                                        'approved' => 'Approved',
+                                        'rejected' => 'Rejected',
+                                        default => 'Pending',
+                                    };
+                                @endphp
                                 <tr>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center gap-3">
@@ -43,12 +59,33 @@
                                             </div>
                                         </div>
                                     </td>
+                                    <td class="px-4 py-3 text-gray-700">{{ $club->user?->name ?? '-' }}</td>
                                     <td class="px-4 py-3 text-gray-700">{{ $club->city ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-gray-700">{{ $club->founded_year ?? '-' }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
+                                    </td>
                                     <td class="px-4 py-3 text-gray-700">{{ $club->players_count }}</td>
                                     <td class="px-4 py-3 text-gray-700">{{ $club->coaches_count }}</td>
-                                    <td class="px-4 py-3 text-right">
-                                        <a href="{{ route('clubs.edit', $club) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        @role('Super Admin')
+                                            @if ($club->status !== 'approved')
+                                                <form action="{{ route('clubs.approve', $club) }}" method="POST" class="inline-block">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="text-green-700 hover:text-green-900">Approve</button>
+                                                </form>
+                                            @endif
+
+                                            @if ($club->status !== 'rejected')
+                                                <form action="{{ route('clubs.reject', $club) }}" method="POST" class="inline-block ml-3" onsubmit="return confirm('Tolak club ini?')">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="text-yellow-700 hover:text-yellow-900">Reject</button>
+                                                </form>
+                                            @endif
+                                        @endrole
+
+                                        <a href="{{ route('clubs.edit', $club) }}" class="ml-3 text-indigo-600 hover:text-indigo-900">Edit</a>
                                         <form action="{{ route('clubs.destroy', $club) }}" method="POST" class="inline-block ml-3" onsubmit="return confirm('Yakin ingin menghapus data ini? Data yang terkait bisa ikut terhapus.')">
                                             @csrf
                                             @method('DELETE')
@@ -58,7 +95,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-500">Belum ada data klub.</td>
+                                    <td colspan="7" class="px-4 py-6 text-center text-gray-500">Belum ada data klub.</td>
                                 </tr>
                             @endforelse
                         </tbody>

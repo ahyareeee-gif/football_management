@@ -11,8 +11,20 @@ class TournamentRegistration extends Model
         'tournament_id',
         'club_id',
         'status',
+        'contact_person',
+        'contact_phone',
+        'notes',
         'payment_proof',
+        'registration_document',
+        'agreement_accepted',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'agreement_accepted' => 'boolean',
+        ];
+    }
 
     public function tournament(): BelongsTo
     {

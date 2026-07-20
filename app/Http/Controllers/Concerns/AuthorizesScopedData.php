@@ -30,6 +30,16 @@ trait AuthorizesScopedData
         return auth()->user()?->club;
     }
 
+    protected function ensureClubIsApproved(?Club $club = null): Club
+    {
+        $club ??= $this->currentUserClub();
+
+        abort_unless($club, 403, 'Admin Klub harus membuat klub terlebih dahulu.');
+        abort_unless($club->isApproved(), 403, 'Klub Anda belum disetujui Super Admin.');
+
+        return $club;
+    }
+
     protected function scopedClubsQuery(): Builder
     {
         $query = Club::query();

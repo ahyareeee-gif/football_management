@@ -1,5 +1,9 @@
 <?php
 
+use App\Mail\EmailVerificationOtpMail;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+
 test('registration screen can be rendered', function () {
     $response = $this->get('/register');
 
@@ -7,6 +11,8 @@ test('registration screen can be rendered', function () {
 });
 
 test('new users can register', function () {
+    Mail::fake();
+
     $response = $this->post('/register', [
         'name' => 'Test User',
         'email' => 'test@example.com',
@@ -15,5 +21,13 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+
+    $user = User::where('email', 'test@example.com')->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user->status)->toBe('active')
+        ->and($user->hasRole('Admin Klub'))->toBeTrue();
+
+    Mail::assertSent(EmailVerificationOtpMail::class);
+    $response->assertRedirect(route('verification.notice', absolute: false));
 });

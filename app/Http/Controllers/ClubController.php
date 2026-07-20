@@ -15,6 +15,7 @@ class ClubController extends Controller
     public function index()
     {
         $clubs = $this->scopedClubsQuery()
+            ->with('user')
             ->withCount(['players', 'coaches'])
             ->latest()
             ->get();
@@ -24,14 +25,16 @@ class ClubController extends Controller
 
     public function create()
     {
-        abort_if($this->isAdminKlub() && $this->currentUserClub(), 403, 'Admin Klub hanya boleh memiliki satu klub.');
+        abort_unless($this->isAdminKlub(), 403);
+        abort_if($this->currentUserClub(), 403, 'Admin Klub hanya boleh memiliki satu klub.');
 
         return view('clubs.create');
     }
 
     public function store(Request $request)
     {
-        abort_if($this->isAdminKlub() && $this->currentUserClub(), 403, 'Admin Klub hanya boleh memiliki satu klub.');
+        abort_unless($this->isAdminKlub(), 403);
+        abort_if($this->currentUserClub(), 403, 'Admin Klub hanya boleh memiliki satu klub.');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -43,12 +46,29 @@ class ClubController extends Controller
         ]);
 
         $validated['user_id'] = auth()->id();
+        $validated['status'] = 'pending';
         $validated['logo'] = $this->storeUploadedFile($request, 'logo', 'clubs/logos');
 
         Club::create($validated);
 
         return redirect()->route('clubs.index')
             ->with('success', 'Club berhasil ditambahkan');
+    }
+
+    public function approve(Club $club)
+    {
+        $club->update(['status' => 'approved']);
+
+        return redirect()->route('clubs.index')
+            ->with('success', 'Club berhasil disetujui');
+    }
+
+    public function reject(Club $club)
+    {
+        $club->update(['status' => 'rejected']);
+
+        return redirect()->route('clubs.index')
+            ->with('success', 'Club berhasil ditolak');
     }
 
     public function edit(Club $club)
@@ -70,6 +90,10 @@ class ClubController extends Controller
             'address' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
         ]);
+
+        if ($this->isAdminKlub() && $club->status === 'rejected') {
+            $validated['status'] = 'pending';
+        }
 
         $logo = $this->replaceUploadedFile($request, 'logo', 'clubs/logos', $club->logo);
 

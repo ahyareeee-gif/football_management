@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -40,12 +40,20 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'status' => 'active',
         ]);
 
-        event(new Registered($user));
+        Role::firstOrCreate(['name' => 'Admin Klub']);
+        $user->assignRole('Admin Klub');
+
+        $otpSent = EmailVerificationOtpController::sendOtp($user);
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        $redirect = redirect()->route('verification.notice');
+
+        return $otpSent
+            ? $redirect->with('status', 'verification-code-sent')
+            : $redirect->withErrors(['code' => 'Kode OTP gagal dikirim. Periksa konfigurasi SMTP atau klik kirim ulang kode.']);
     }
 }

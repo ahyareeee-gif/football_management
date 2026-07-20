@@ -12,11 +12,17 @@ class Club extends Model
         'user_id',
         'name',
         'logo',
+        'status',
         'founded_year',
         'city',
         'address',
         'description',
     ];
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
 
     public function user(): BelongsTo
     {
@@ -33,6 +39,11 @@ class Club extends Model
         return $this->hasMany(Coach::class);
     }
 
+
+    public function staff(): HasMany
+    {
+        return $this->hasMany(ClubStaff::class);
+    }
     public function registrations(): HasMany
     {
         return $this->hasMany(TournamentRegistration::class);

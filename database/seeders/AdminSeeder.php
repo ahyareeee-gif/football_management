@@ -15,9 +15,16 @@ class AdminSeeder extends Seeder
             ],
             [
                 'name' => 'Super Admin',
-                'password' => bcrypt('password123')
+                'password' => bcrypt('password123'),
+                'email_verified_at' => now(),
+                'status' => 'active',
             ]
         );
+
+        $admin->forceFill([
+            'email_verified_at' => $admin->email_verified_at ?? now(),
+            'status' => $admin->status ?? 'active',
+        ])->save();
 
         $admin->assignRole('Super Admin');
     }

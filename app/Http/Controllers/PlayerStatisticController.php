@@ -7,6 +7,7 @@ use App\Models\FootballMatch;
 use App\Models\Player;
 use App\Models\PlayerStatistic;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -28,10 +29,13 @@ class PlayerStatisticController extends Controller
 
     public function create()
     {
+        $matches = $this->finishedMatchesForStatistics();
+
         return view('statistics.create', [
             'statistic' => null,
             'players' => Player::with('club')->orderBy('name')->get(),
-            'matches' => $this->scopedMatchesQuery()->with(['tournament', 'homeClub', 'awayClub'])->latest('match_date')->get(),
+            'matches' => $matches,
+            'playersByMatch' => $this->playersByMatch($matches),
         ]);
     }
 
@@ -48,11 +52,13 @@ class PlayerStatisticController extends Controller
     public function edit(PlayerStatistic $statistic)
     {
         $this->authorizeMatchAccess($statistic->match);
+        $matches = $this->finishedMatchesForStatistics($statistic->football_match_id);
 
         return view('statistics.edit', [
             'statistic' => $statistic,
             'players' => Player::with('club')->orderBy('name')->get(),
-            'matches' => $this->scopedMatchesQuery()->with(['tournament', 'homeClub', 'awayClub'])->latest('match_date')->get(),
+            'matches' => $matches,
+            'playersByMatch' => $this->playersByMatch($matches),
         ]);
     }
 
@@ -100,7 +106,13 @@ class PlayerStatisticController extends Controller
         $match = FootballMatch::findOrFail($validated['football_match_id']);
         $this->authorizeMatchAccess($match);
 
-        if (! in_array($player->club_id, [$match->home_club_id, $match->away_club_id], true)) {
+        if ($match->status !== 'Finished' || ! $match->result()->exists()) {
+            throw ValidationException::withMessages([
+                'football_match_id' => 'Statistik pemain hanya bisa ditambahkan setelah skor pertandingan disimpan.',
+            ]);
+        }
+
+        if (! in_array((int) $player->club_id, [(int) $match->home_club_id, (int) $match->away_club_id], true)) {
             throw ValidationException::withMessages([
                 'player_id' => 'Pemain harus berasal dari salah satu klub yang bermain di pertandingan ini.',
             ]);
@@ -115,5 +127,52 @@ class PlayerStatisticController extends Controller
             ->when($this->isAdminTurnamen(), function ($query) {
                 $query->whereHas('tournament', fn ($tournamentQuery) => $tournamentQuery->where('created_by', auth()->id()));
             });
+    }
+
+    private function finishedMatchesForStatistics(?int $includeMatchId = null): Collection
+    {
+        return $this->scopedMatchesQuery()
+            ->with(['tournament', 'homeClub', 'awayClub', 'result'])
+            ->where(function ($query) use ($includeMatchId) {
+                $query->where(function ($finishedQuery) {
+                    $finishedQuery->where('status', 'Finished')
+                        ->whereHas('result');
+                });
+
+                if ($includeMatchId) {
+                    $query->orWhere('id', $includeMatchId);
+                }
+            })
+            ->latest('match_date')
+            ->get();
+    }
+
+    private function playersByMatch(Collection $matches): array
+    {
+        $clubIds = $matches
+            ->flatMap(fn (FootballMatch $match) => [$match->home_club_id, $match->away_club_id])
+            ->filter()
+            ->unique()
+            ->values();
+
+        $playersByClub = Player::with('club')
+            ->whereIn('club_id', $clubIds)
+            ->orderBy('name')
+            ->get()
+            ->groupBy('club_id');
+
+        return $matches->mapWithKeys(function (FootballMatch $match) use ($playersByClub) {
+            $players = collect([$match->home_club_id, $match->away_club_id])
+                ->flatMap(fn ($clubId) => $playersByClub->get($clubId, collect()))
+                ->map(fn (Player $player) => [
+                    'id' => $player->id,
+                    'name' => $player->name,
+                    'club' => $player->club?->name,
+                ])
+                ->values()
+                ->all();
+
+            return [$match->id => $players];
+        })->all();
     }
 }
